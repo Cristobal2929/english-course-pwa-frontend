@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curso PWA Seguro</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header><h1>Curso de Inglés Funcional</h1></header>
+<main>
+<section id="login-section" class="login-section">
+  <h2>Inicia Sesión</h2>
+  <p>Accede al curso con tu cuenta.</p>
+  <input type="text" id="username" placeholder="Usuario">
+  <input type="password" id="password" placeholder="Contraseña">
+  <button onclick="handleLogin()">Entrar</button>
+  <p>Usuario de prueba: admin / admin</p>
+</section>
+
+<div id="main-content" style="display:none;">
+    <button id="logout-button" class="back-button" onclick="handleLogout()">Cerrar Sesión</button>
+    <section id="lecciones" class="list-section">
+        <h2>Lecciones</h2>
+        <ul id="lista-lecciones"></ul>
+    </section>
+    <section id="tests" class="list-section">
+        <h2>Tests</h2>
+        <ul id="lista-tests"></ul>
+    </section>
+    <section id="contenido-container" class="content-container" style="display:none;"></section>
+</div>
+
+</main>
+<script src="js/app.js"></script>
+</body>
+</html>
