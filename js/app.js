@@ -1,5 +1,6 @@
-
-const API_URL = 'https://english-course-pwa-backend.onrender.com/api';
+// Este es el URL de la API de tu backend en Render.
+// Es la única línea que debes cambiar si la dirección del backend cambia.
+const API_BASE_URL = 'https://english-course-pwa-backend.onrender.com/api';
 
 const NUM_LECCIONES = 20;
 
@@ -11,7 +12,10 @@ const mainContent = document.getElementById('main-content');
 const logoutButton = document.getElementById('logout-button');
 
 function showSection(sectionId) {
-    const sections = { lecciones: document.getElementById('lecciones'), tests: document.getElementById('tests') };
+    const sections = {
+        lecciones: document.getElementById('lecciones-section'),
+        tests: document.getElementById('tests-section')
+    };
     for (const id in sections) {
         sections[id].style.display = id === sectionId ? 'block' : 'none';
     }
@@ -26,156 +30,105 @@ async function handleLogin() {
     const password = document.getElementById('password').value;
 
     try {
-        const res = await fetch(`${API_URL}/login`, {
+        const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ username, password })
         });
-        const data = await res.json();
-        if (res.ok) {
-            localStorage.setItem('token', data.token);
-            alert('¡Login exitoso!');
-            checkAuth();
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Login exitoso!');
+            localStorage.setItem('token', data.token); // Guardar el token si se necesita
+            loginSection.style.display = 'none';
+            mainContent.style.display = 'block';
+            showSection('lecciones');
         } else {
-            alert(`Error de login: ${data.error}`);
+            alert(data.message || 'Error en el login.');
         }
     } catch (error) {
-        alert('Error de conexión con el servidor.');
+        alert('Error de conexión con el servidor. Por favor, revisa la URL.');
     }
+}
+
+async function getLecciones() {
+    const response = await fetch(`${API_BASE_URL}/lecciones`);
+    const data = await response.json();
+    return data;
+}
+
+async function getLeccion(leccionId) {
+    const response = await fetch(`${API_BASE_URL}/lecciones/${leccionId}`);
+    const data = await response.json();
+    return data;
+}
+
+async function getAudio(texto) {
+    const response = await fetch(`${API_BASE_URL}/audio/${texto}`);
+    return response.blob();
+}
+
+async function renderLecciones() {
+    const lecciones = await getLecciones();
+    listaLecciones.innerHTML = '';
+    lecciones.forEach(leccion => {
+        const li = document.createElement('li');
+        li.textContent = leccion.titulo;
+        li.dataset.id = leccion.id;
+        li.addEventListener('click', () => renderLeccion(leccion.id));
+        listaLecciones.appendChild(li);
+    });
+    showSection('lecciones');
+}
+
+async function renderLeccion(leccionId) {
+    const leccion = await getLeccion(leccionId);
+    contenidoContainer.innerHTML = '';
+    leccion.forEach(item => {
+        const p = document.createElement('p');
+        p.textContent = `${item.pregunta} - ${item.respuesta}`;
+        const audioBtn = document.createElement('button');
+        audioBtn.textContent = '▶️';
+        audioBtn.addEventListener('click', async () => {
+            const audioBlob = await getAudio(item.pregunta);
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        });
+        contenidoContainer.appendChild(p);
+        contenidoContainer.appendChild(audioBtn);
+    });
+    contenidoContainer.style.display = 'block';
 }
 
 function handleLogout() {
     localStorage.removeItem('token');
-    alert('Sesión cerrada.');
-    checkAuth();
+    loginSection.style.display = 'block';
+    mainContent.style.display = 'none';
 }
 
-async function checkAuth() {
+// Event Listeners
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleLogin();
+});
+
+document.getElementById('lecciones-link').addEventListener('click', renderLecciones);
+document.getElementById('tests-link').addEventListener('click', () => showSection('tests'));
+document.getElementById('logout-button').addEventListener('click', handleLogout);
+
+// Iniciar la aplicación
+document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
     if (token) {
         loginSection.style.display = 'none';
         mainContent.style.display = 'block';
-        cargarLecciones();
-        cargarTests();
-        showSection('lecciones');
+        renderLecciones();
     } else {
         loginSection.style.display = 'block';
         mainContent.style.display = 'none';
     }
-}
+});
 
-async function cargarLecciones() {
-    listaLecciones.innerHTML = '';
-    for (let i = 1; i <= NUM_LECCIONES; i++) {
-        const li = document.createElement('li');
-        li.textContent = `Lección ${i}`;
-        li.onclick = () => abrirLeccion(i);
-        listaLecciones.appendChild(li);
-    }
-}
-
-async function abrirLeccion(n) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        alert('Por favor, inicia sesión para acceder a las lecciones.');
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}/lecciones/${n}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            alert(`Error: ${data.error}`);
-            return;
-        }
-        
-        const items = await res.json();
-        contenidoContainer.style.display = 'block';
-        contenidoContainer.innerHTML = `<button class="back-button" onclick="showSection('lecciones')">← Volver</button><h2>Lección ${n}</h2><div id="leccion-content"></div>`;
-        const leccionContent = document.getElementById('leccion-content');
-        items.forEach((item, idx) => {
-            const div = document.createElement('div');
-            div.className = 'content-item';
-            div.innerHTML = `<h3>${idx + 1}. ${item.palabra}</h3><p>${item.traduccion}</p>`;
-            const audio = document.createElement('audio');
-            audio.controls = true;
-            audio.src = `${API_URL}/audios/leccion${n}_item${idx + 1}.mp3`;
-            div.appendChild(audio);
-            leccionContent.appendChild(div);
-        });
-        showSection('contenido-leccion');
-    } catch (error) {
-        alert(`Error al cargar la lección: ${error}`);
-    }
-}
-
-async function cargarTests() {
-    listaTests.innerHTML = '';
-    for (let i = 1; i <= NUM_LECCIONES; i++) {
-        const li = document.createElement('li');
-        li.textContent = `Test Lección ${i}`;
-        li.onclick = () => abrirTest(i);
-        listaTests.appendChild(li);
-    }
-}
-
-async function abrirTest(n) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        alert('Por favor, inicia sesión para acceder a los tests.');
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}/tests/${n}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            alert(`Error: ${data.error}`);
-            return;
-        }
-
-        const items = await res.json();
-        let puntaje = 0;
-        contenidoContainer.style.display = 'block';
-        contenidoContainer.innerHTML = `<button class="back-button" onclick="showSection('tests')">← Volver</button><h2>Test Lección ${n}</h2><div id="test-content"></div><p id="test-result">Puntaje: 0/${items.length}</p>`;
-        const testContent = document.getElementById('test-content');
-        const testResult = document.getElementById('test-result');
-
-        items.forEach((item, idx) => {
-            const div = document.createElement('div');
-            div.className = 'content-item test-container';
-            div.innerHTML = `<h3>${idx + 1}. ${item.pregunta}</h3><input type="text" data-correct-answer="${item.respuesta.toLowerCase()}" placeholder="Tu respuesta"><button>Revisar</button><p class="result"></p>`;
-            const button = div.querySelector('button');
-            const input = div.querySelector('input');
-            const resultP = div.querySelector('.result');
-            
-            button.onclick = () => {
-                const userAnswer = input.value.trim().toLowerCase();
-                const correctAnswer = input.getAttribute('data-correct-answer');
-                if (userAnswer === correctAnswer) {
-                    resultP.textContent = '✔ Correcto';
-                    resultP.className = 'result correct';
-                    input.disabled = true;
-                    button.disabled = true;
-                    puntaje++;
-                } else {
-                    resultP.textContent = `✖ Incorrecto. La respuesta correcta es: ${item.respuesta}`;
-                    resultP.className = 'result incorrect';
-                }
-                testResult.textContent = `Puntaje: ${puntaje}/${items.length}`;
-            };
-            testContent.appendChild(div);
-        });
-        showSection('contenido-test');
-    } catch (error) {
-        alert(`Error al cargar el test: ${error}`);
-    }
-}
-
-checkAuth();
