@@ -1,5 +1,6 @@
 
 const API_URL = 'https://english-course-pwa-backend.onrender.com/api';
+
 const NUM_LECCIONES = 20;
 
 const listaLecciones = document.getElementById('lista-lecciones');
