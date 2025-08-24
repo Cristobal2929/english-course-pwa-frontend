@@ -1,0 +1,9 @@
+{
+  "name": "Curso de Ingl\u00e9s PWA",
+  "short_name": "Ingl\u00e9s",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0a74da",
+  "icons": []
+}
